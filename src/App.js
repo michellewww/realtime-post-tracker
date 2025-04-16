@@ -64,11 +64,12 @@ function App() {
       });
       
       if (!response.ok) {
-        throw new Error('Subscription failed');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Subscription failed');
       }
       
       const data = await response.json();
-      setMessage(data.message);
+      setMessage(`${data.message} - A confirmation email has been sent to your inbox.`);
       setEmail('');
     } catch (err) {
       setError('Failed to subscribe. Please try again.');
