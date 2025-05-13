@@ -23,11 +23,11 @@ function App() {
         },
         body: JSON.stringify({ query: searchQuery }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Search failed');
       }
-      
+
       const data = await response.json();
       setKeywords(data.keywords);
       if (data.keywords.length === 0) {
@@ -46,34 +46,39 @@ function App() {
     setLoading(true);
     setError('');
     setMessage('');
-    
-    if (!email) {
-      setError('Please enter your email address');
+
+    if (!email || !searchQuery) {
+      setError('Please enter both email and a topic');
       setLoading(false);
       return;
     }
-    
+
     try {
+      console.log('Subscribing with:', { email, topic: searchQuery });
+
       const formData = new FormData();
       formData.append('email', email);
       formData.append('topic', searchQuery);
-      
+
       const response = await fetch('/api/subscribe', {
         method: 'POST',
         body: formData,
       });
-      
+
+      console.log('Status:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Subscription failed');
+        const rawText = await response.text();
+        console.error('Raw backend response:', rawText);
+        throw new Error('Subscription failed');
       }
-      
+
       const data = await response.json();
       setMessage(`${data.message} - A confirmation email has been sent to your inbox.`);
       setEmail('');
     } catch (err) {
       setError('Failed to subscribe. Please try again.');
-      console.error(err);
+      console.error('[Subscribe error]', err);
     } finally {
       setLoading(false);
     }
@@ -109,10 +114,10 @@ function App() {
             </button>
           </div>
         </div>
-        
+
         {error && <div className="error-message">{error}</div>}
         {message && <div className="success-message">{message}</div>}
-        
+
         {keywords.length > 0 && (
           <div className="keywords-container">
             <h2>Keywords from your search:</h2>
