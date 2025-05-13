@@ -9,6 +9,7 @@ function App() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState([]);
+  const [fetchingArticles, setFetchingArticles] = useState(false);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -107,6 +108,7 @@ function App() {
 
   const fetchNews = async () => {
     try {
+      setFetchingArticles(true);
       console.log("Fetching news for keywords:", keywords);
       
       const response = await fetch('/api/news', {
@@ -135,6 +137,8 @@ function App() {
     } catch (err) {
       console.error('Error fetching news:', err);
       setArticles([]);
+    } finally {
+      setFetchingArticles(false);
     }
   };
 
@@ -173,35 +177,42 @@ function App() {
         {message && <div className="success-message">{message}</div>}
 
 
-        {articles && articles.length > 0 ? (
-          <div className="news-container">
-            <h2>Recent News Articles</h2>
-            <div className="news-list">
-              {articles.map((article, index) => (
-                <div key={index} className="news-card">
-                  <div className="news-source">{article.source}</div>
-                  <a 
-                    href={article.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="news-title"
-                  >
-                    {article.title}
-                  </a>
-                  <p className="news-description">{article.description}</p>
-                  <span className="news-time">
-                    {new Date(article.publishedAt).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
+        {fetchingArticles ? (
+          <div className="loading-container">
+            <h2>Searching for news articles...</h2>
+            <div className="loading-spinner"></div>
           </div>
         ) : (
-          keywords.length > 0 && (
+          articles && articles.length > 0 ? (
             <div className="news-container">
-              <h2>No recent news found for these keywords</h2>
-              <p>Try different keywords or check back later.</p>
+              <h2>Recent News Articles</h2>
+              <div className="news-list">
+                {articles.map((article, index) => (
+                  <div key={index} className="news-card">
+                    <div className="news-source">{article.source}</div>
+                    <a 
+                      href={article.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="news-title"
+                    >
+                      {article.title}
+                    </a>
+                    <p className="news-description">{article.description}</p>
+                    <span className="news-time">
+                      {new Date(article.publishedAt).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
+          ) : (
+            keywords.length > 0 && !loading && (
+              <div className="news-container">
+                <h2>No recent news found for these keywords</h2>
+                <p>Try different keywords or check back later.</p>
+              </div>
+            )
           )
         )}
       </header>
