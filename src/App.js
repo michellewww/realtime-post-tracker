@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
@@ -8,14 +8,23 @@ function App() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [articles, setArticles] = useState([]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setMessage('');
+    setArticles([]); // Clear previous articles
+    
+    if (!searchQuery.trim()) {
+      setError('Please enter a search term');
+      setLoading(false);
+      return;
+    }
     
     try {
+      console.log("Searching for:", searchQuery);
       const response = await fetch('/api/search', {
         method: 'POST',
         headers: {
@@ -29,10 +38,16 @@ function App() {
       }
 
       const data = await response.json();
-      setKeywords(data.keywords);
-      if (data.keywords.length === 0) {
-        setMessage('No relevant keywords found. Try a different search term.');
+      console.log("Received keywords:", data.keywords);
+      
+      // If no keywords were extracted, use the original search query as a keyword
+      if (!data.keywords || data.keywords.length === 0) {
+        console.log("No keywords extracted, using search query as keyword");
+        setKeywords([searchQuery.trim()]);
+      } else {
+        setKeywords(data.keywords);
       }
+      
     } catch (err) {
       setError('Failed to search. Please try again.');
       console.error(err);
@@ -84,6 +99,45 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (keywords.length > 0) {
+      fetchNews();
+    }
+  }, [keywords]);
+
+  const fetchNews = async () => {
+    try {
+      console.log("Fetching news for keywords:", keywords);
+      
+      const response = await fetch('/api/news', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ keywords }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch news');
+      }
+
+      const data = await response.json();
+      console.log("News API response:", data);
+      console.log("Number of articles received:", data.articles ? data.articles.length : 0);
+      
+      if (data.articles && data.articles.length > 0) {
+        setArticles(data.articles);
+        console.log("Articles state updated");
+      } else {
+        console.log("No articles found or empty articles array");
+        setArticles([]);
+      }
+    } catch (err) {
+      console.error('Error fetching news:', err);
+      setArticles([]);
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -118,15 +172,37 @@ function App() {
         {error && <div className="error-message">{error}</div>}
         {message && <div className="success-message">{message}</div>}
 
-        {keywords.length > 0 && (
-          <div className="keywords-container">
-            <h2>Keywords from your search:</h2>
-            <ul className="keywords-list">
-              {keywords.map((keyword, index) => (
-                <li key={index} className="keyword-item">{keyword}</li>
+
+        {articles && articles.length > 0 ? (
+          <div className="news-container">
+            <h2>Recent News Articles</h2>
+            <div className="news-list">
+              {articles.map((article, index) => (
+                <div key={index} className="news-card">
+                  <div className="news-source">{article.source}</div>
+                  <a 
+                    href={article.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="news-title"
+                  >
+                    {article.title}
+                  </a>
+                  <p className="news-description">{article.description}</p>
+                  <span className="news-time">
+                    {new Date(article.publishedAt).toLocaleString()}
+                  </span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
+        ) : (
+          keywords.length > 0 && (
+            <div className="news-container">
+              <h2>No recent news found for these keywords</h2>
+              <p>Try different keywords or check back later.</p>
+            </div>
+          )
         )}
       </header>
     </div>

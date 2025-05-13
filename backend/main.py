@@ -10,12 +10,21 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import os
 import json
+from pydantic import BaseModel
+from typing import List
 
 from models import Subscription
 from database import SessionLocal, engine
 from models import Base
 from scheduler import start_scheduler
 from email_utils import send_email
+from news_crawler import NewsCrawler
+
+class SearchQuery(BaseModel):
+    query: str
+
+class NewsQuery(BaseModel):
+    keywords: List[str]
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 Base.metadata.create_all(bind=engine)
@@ -63,6 +72,41 @@ def get_updates(email: str, topic: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Subscription not found")
     return {"sent_ids": sub.sent_ids.split(',')}
 
+@app.post("/api/news")
+def get_news(query: NewsQuery):
+    crawler = NewsCrawler()
+    articles = crawler.search_news(query.keywords)
+    
+    # Debug output
+    print("DEBUG - Keywords received:", query.keywords)
+    print("DEBUG - Number of articles found:", len(articles))
+    for i, article in enumerate(articles):
+        print(f"DEBUG - Article {i+1}:")
+        print(f"  Title: {article['title']}")
+        print(f"  Source: {article['source']}")
+        print(f"  URL: {article['url']}")
+    
+    return {"articles": articles}
+
+@app.post("/api/search")
+def search(query: SearchQuery):
+    # Simple keyword extraction
+    query_text = query.query.strip()
+    
+    # Make sure to extract meaningful keywords
+    if not query_text:
+        return {"keywords": []}
+    
+    # Simply split the query if it contains multiple words
+    if " " in query_text:
+        # Extract keywords by splitting on spaces and filtering out empty strings
+        keywords = [word.strip() for word in query_text.split() if word.strip()]
+    else:
+        # For single-word queries, just use the query as a keyword
+        keywords = [query_text]
+    
+    print(f"DEBUG - Extracted keywords from '{query_text}': {keywords}")
+    return {"keywords": keywords}
 
 if __name__ == "__main__":
     import uvicorn

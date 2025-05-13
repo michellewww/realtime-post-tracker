@@ -27,3 +27,5 @@ backend/credentials.json
 backend/token.json
 
 env/
+
+subscriptions.db
