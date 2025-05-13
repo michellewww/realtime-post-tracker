@@ -11,7 +11,14 @@ from google.oauth2.credentials import Credentials
 import os
 import json
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+import sys
+from pathlib import Path
+
+# Add the backend directory to the Python path if necessary
+backend_dir = Path(__file__).parent
+if str(backend_dir) not in sys.path:
+    sys.path.append(str(backend_dir))
 
 from models import Subscription
 from database import SessionLocal, engine
@@ -25,6 +32,11 @@ class SearchQuery(BaseModel):
 
 class NewsQuery(BaseModel):
     keywords: List[str]
+
+class FeedbackQuery(BaseModel):
+    keywords: List[str]
+    articleId: str
+    isRelevant: bool
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 Base.metadata.create_all(bind=engine)
@@ -107,6 +119,29 @@ def search(query: SearchQuery):
     
     print(f"DEBUG - Extracted keywords from '{query_text}': {keywords}")
     return {"keywords": keywords}
+
+@app.post("/api/feedback")
+def process_feedback(feedback: FeedbackQuery):
+    """
+    Process user feedback on article relevance.
+    This can be used to improve future search results.
+    """
+    print(f"DEBUG - Received feedback for article: {feedback.articleId}")
+    print(f"DEBUG - Is relevant: {feedback.isRelevant}")
+    print(f"DEBUG - Keywords: {feedback.keywords}")
+    
+    # Use the NewsCrawler to save feedback
+    crawler = NewsCrawler()
+    success = crawler.save_feedback(
+        article_id=feedback.articleId,
+        is_relevant=feedback.isRelevant,
+        keywords=feedback.keywords
+    )
+    
+    if success:
+        return {"status": "success", "message": "Feedback saved and will improve future searches"}
+    else:
+        return {"status": "error", "message": "Failed to save feedback, but still received"}
 
 if __name__ == "__main__":
     import uvicorn

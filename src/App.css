@@ -194,3 +194,82 @@ button {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.news-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.feedback-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.feedback-buttons span {
+  font-size: 0.8em;
+  color: #666;
+}
+
+.feedback-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 5px;
+  border-radius: 50%;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.thumbs-up {
+  color: #34a853;
+}
+
+.thumbs-up:hover {
+  background-color: rgba(52, 168, 83, 0.1);
+  transform: scale(1.1);
+}
+
+.thumbs-down {
+  color: #ea4335;
+}
+
+.thumbs-down:hover {
+  background-color: rgba(234, 67, 53, 0.1);
+  transform: scale(1.1);
+}
+
+.feedback-button.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.feedback-button.disabled:hover {
+  background-color: transparent;
+  transform: none;
+}
+
+.feedback-status {
+  font-size: 0.8em;
+  margin-left: 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.feedback-status.pending {
+  color: #4285f4;
+}
+
+.feedback-status.success {
+  color: #34a853;
+}
+
+.feedback-status.error {
+  color: #ea4335;
+}

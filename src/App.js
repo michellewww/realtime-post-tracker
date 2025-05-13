@@ -10,6 +10,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState([]);
   const [fetchingArticles, setFetchingArticles] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState({});
+  const [feedbackStatuses, setFeedbackStatuses] = useState({});
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -142,6 +144,78 @@ function App() {
     }
   };
 
+  const handleFeedback = async (articleId, isRelevant) => {
+    try {
+      console.log(`Sending feedback for article ${articleId}: ${isRelevant ? 'relevant' : 'not relevant'}`);
+      
+      // Mark this article as having feedback in progress
+      setFeedbackStatuses(prev => ({
+        ...prev,
+        [articleId]: 'pending'
+      }));
+      
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          keywords: keywords,
+          articleId: articleId,
+          isRelevant: isRelevant
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send feedback');
+      }
+
+      const data = await response.json();
+      console.log("Feedback response:", data);
+      
+      // Mark feedback as successfully sent
+      setFeedbackSent(prev => ({
+        ...prev,
+        [articleId]: true
+      }));
+      
+      setFeedbackStatuses(prev => ({
+        ...prev,
+        [articleId]: 'success'
+      }));
+      
+      // Clear success status after 3 seconds
+      setTimeout(() => {
+        setFeedbackStatuses(prev => {
+          const newStatuses = {...prev};
+          if (newStatuses[articleId] === 'success') {
+            delete newStatuses[articleId];
+          }
+          return newStatuses;
+        });
+      }, 3000);
+      
+    } catch (err) {
+      console.error('Error sending feedback:', err);
+      
+      setFeedbackStatuses(prev => ({
+        ...prev,
+        [articleId]: 'error'
+      }));
+      
+      // Clear error status after 3 seconds
+      setTimeout(() => {
+        setFeedbackStatuses(prev => {
+          const newStatuses = {...prev};
+          if (newStatuses[articleId] === 'error') {
+            delete newStatuses[articleId];
+          }
+          return newStatuses;
+        });
+      }, 3000);
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -199,9 +273,37 @@ function App() {
                       {article.title}
                     </a>
                     <p className="news-description">{article.description}</p>
-                    <span className="news-time">
-                      {new Date(article.publishedAt).toLocaleString()}
-                    </span>
+                    <div className="news-footer">
+                      <span className="news-time">
+                        {new Date(article.publishedAt).toLocaleString()}
+                      </span>
+                      <div className="feedback-buttons">
+                        <span>Is this relevant?</span>
+                        <button 
+                          onClick={() => handleFeedback(article.url, true)}
+                          className={`feedback-button thumbs-up ${feedbackSent[article.url] ? 'disabled' : ''}`}
+                          disabled={feedbackSent[article.url]}
+                        >
+                          👍
+                        </button>
+                        <button 
+                          onClick={() => handleFeedback(article.url, false)}
+                          className={`feedback-button thumbs-down ${feedbackSent[article.url] ? 'disabled' : ''}`}
+                          disabled={feedbackSent[article.url]}
+                        >
+                          👎
+                        </button>
+                        {feedbackStatuses[article.url] === 'pending' && (
+                          <span className="feedback-status pending">Sending...</span>
+                        )}
+                        {feedbackStatuses[article.url] === 'success' && (
+                          <span className="feedback-status success">Thanks for your feedback!</span>
+                        )}
+                        {feedbackStatuses[article.url] === 'error' && (
+                          <span className="feedback-status error">Error sending feedback</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
